@@ -3,10 +3,11 @@
 [![npm version](https://badge.fury.io/js/bitcoin-auth.svg)](https://badge.fury.io/js/bitcoin-auth)
 [![npm downloads](https://img.shields.io/npm/dm/bitcoin-auth.svg)](https://www.npmjs.com/package/bitcoin-auth)
 
-The "Bitcoin Auth" client library provides an easy way to authenticate users with REST APIs using private keys via signatures. This library simplifies generating and verifying an `X-Auth-Token` header containing a cryptographic signature.
-
+The "Bitcoin Auth" library simplifies authenticating REST APIs with Bitcoin keys by generating and verifying cryptographic signatures in an `X-Auth-Token` header.
 
 ## Installation
+
+Install with Bun:
 
 ```bash
 bun add bitcoin-auth
@@ -14,120 +15,126 @@ bun add bitcoin-auth
 
 ## Generating an Auth Token
 
-To create an `X-Auth-Token`:
-
-Import the auth helper
 ```typescript
 import { getAuthToken } from 'bitcoin-auth';
+
+// Generate the token
+const token = getAuthToken(privateKeyWif, path, body, 'brc77');
 ```
 
-Generate the token, providing the wif, path, and body.
-
 ```typescript
-const token = getAuthToken(privateKeyWif, path, body);
-console.log({ token })
-// { token: "pubkey|timestamp|requestPath|signature" }
+console.log({ token });
+// Output: { token: "pubkey|scheme|timestamp|requestPath|signature" }
 ```
 
-Add the `X-Auth-Token` header to your API request:
-
 ```typescript
-const response = await fetch("https://somedomain.com/", {
+// Include the token in your API request:
+const response = await fetch("https://somedomain.com" + path, {
   method: 'POST',
   headers: { 'X-Auth-Token': token },
   body
 });
 ```
 
+When your request includes a body, provide it:
+
+```typescript
+const tokenWithBody = getAuthToken(privateKeyWif, apiPath, body, 'brc77');
+```
+
+For classic Bitcoin Signed Message:
+
+```typescript
+const tokenNoBodyBsm = getAuthToken(privateKeyWif, apiPath, body, 'bsm');
+```
+
 ## Features
 
-* **Auth Token Generation & Verification**: Easy-to-use functions for generating and verifying `X-Auth-Token` headers.
-* **Dual Cryptographic Modes**: Supports classic 'bsm' and modern 'bsv' [(BRC-77)](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md) signing modes.
-* **Zero Direct Dependencies**: Peer dependency of `@bsv/sdk` which itself has zero dependecies.
+* **Auth Token Generation & Verification**: Easy-to-use functions for token handling.
+* **Dual Cryptographic Schemes**: Supports 'bsm' (legacy) and 'brc77' (modern, [BRC-77](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md)).
+* **Minimal Dependencies**: Only requires the peer dependency `@bsv/sdk`.
 
 ## Usage Details
 
-Authentication involves creating a token from the request path, a timestamp, and the SHA256 hash of the body (when there is one). Two cryptographic modes are supported:
+Tokens contain:
 
-*   **Request Path**: The `requestPath` parameter for all functions must be the full URL path that the server receives, including any leading slash and all query parameters (e.g., `/api/v1/items?category=books&page=2`). In an Express.js application, this typically corresponds to `req.originalUrl`.
-*   **Timestamp**: An ISO8601 formatted string.
-*   **Body Hashing**: If a request body is present, its SHA256 hash is included in the message to be signed.
+* Request path (including query parameters)
+* ISO8601 timestamp
+* SHA256 hash of request body (if present)
+* Signing scheme used ('bsm' or 'brc77')
 
-Two cryptographic modes are supported:
+Token format:
+`pubkey|scheme|timestamp|requestPath|signature`
 
-* Classic 'bsm' mode uses [Bitcoin Signed Message](https://en.bitcoin.it/wiki/Message_signing)
-* Modern 'bsv' mode compliant with [BRC-77](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md).
+Cryptographic schemes:
 
-### Token Generation
+* `'brc77'` (default): Recommended scheme, uses `SignedMessage.sign()` from BSV SDK.
+* `'bsm'`: Classic Bitcoin Signed Message via `BSM.sign()` from BSV SDK.
+
+### Token Generation Example
 
 ```typescript
 import { getAuthToken, parseAuthToken, verifyAuthToken, AuthToken, AuthPayload } from 'bitcoin-auth';
-```
-
-Use ANY Bitcoin library to generate a key in WIF format
-```typescript
 import { PrivateKey } from "@bsv/sdk";
+
 const privateKey = PrivateKey.fromRandom();
-```
-
-Prepare the path and body
-```typescript
-const path = "/some/api/path?param1=value1&param2=value2"; // Example including query parameters
+const path = "/some/api/path?param1=value1";
 const body = JSON.stringify(["hello", "world"]);
-```
 
-When making a request with a body, be sure to provide it to the auth function.
-```typescript
-const tokenWithBody = getAuthToken(privateKeyWif, apiPath, 'bsv', body);
-```
-
-To sign using Bitcoin Signed Message (classic) instead...
-```typescript
-const tokenNoBodyBsm = getAuthToken(privateKeyWif, apiPath, 'bsm');
+const tokenWithBody = getAuthToken(privateKeyWif, path, body, 'brc77');
+const tokenNoBodyBsm = getAuthToken(privateKeyWif, path, undefined, 'bsm');
 ```
 
 ## Parsing & Verification
 
-```typescript
-const { pubkey, timestamp, requestPath, signature }: AuthToken = parseAuthToken(tokenWithBody);
-```
+Parsing a token:
 
 ```typescript
-// Verification example with body
+const parsedToken: AuthToken | null = parseAuthToken(tokenWithBody);
+if (parsedToken) {
+  console.log(parsedToken);
+} else {
+  console.log("Failed to parse token.");
+}
+```
+
+Verifying tokens:
+
+```typescript
 const authPayload: AuthPayload = {
   requestPath,
   timestamp: new Date().toISOString(),
-  body,
+  body
 };
-// For bodies that are not UTF-8 strings, you can specify encoding e.g. 'hex' or 'base64' as the last argument to verifyAuthToken.
-const valid = verifyAuthToken(token, authPayload);
 
-// Verification example without body
-const verificationPayloadNoBody: AuthPayload = {
-  requestPath: apiPath,
+const isValid = verifyAuthToken(tokenWithBody, authPayload);
+
+const payloadNoBody: AuthPayload = {
+  requestPath,
   timestamp: new Date().toISOString()
 };
-const isValidNoBody = verifyAuthToken(tokenNoBodyBsm, verificationPayloadNoBody, 5, 'bsm');
+
+const isValidNoBody = verifyAuthToken(tokenNoBodyBsm, payloadNoBody);
 ```
 
-**Important Security Note**: Handle the `privateKeyWif` securely at all times.
+**Security Note**: Always securely handle `privateKeyWif`.
 
-### DTOs and Auth Types
+### Types and Interfaces
 
-Core authentication interfaces:
+Core authentication types:
 
-* `AuthToken`: Represents the fields extracted by `parseAuthToken` from the token string: `{ pubkey, timestamp, requestPath, signature }`. The type also inherits `body?: string` from `AuthPayload`.
-* `AuthPayload`: Data required for signing/verification:
+* `AuthToken`: `{ pubkey, scheme, timestamp, requestPath, signature }`
+* `AuthPayload`: Data for signing/verification:
 
 ```typescript
 export interface AuthPayload {
   requestPath: string;
-  timestamp: string; // ISO8601 format
-  body?: string;     // Optional, required if used during token generation
+  timestamp: string; // ISO8601
+  body?: string;
 }
 ```
 
-Example construction:
+Example:
 
 ```typescript
 const payloadWithBody: AuthPayload = {
@@ -142,23 +149,40 @@ const payload: AuthPayload = {
 };
 ```
 
-### Signature Format
+### API Reference
 
-* **Both BSM and BSV (BRC-77) signatures are base64-encoded.**
+#### `getAuthToken(privateKeyWif, requestPath, body?, scheme?, bodyEncoding?)`
 
-## Tests
+Generates a token:
 
-Run tests:
+* `privateKeyWif`: WIF format private key
+* `requestPath`: Full request URL path
+* `body`: Optional request body
+* `scheme`: Optional signing scheme (`'brc77'` or `'bsm'`, default `'brc77'`)
+* `bodyEncoding`: Optional encoding (default `'utf8'`)
 
-```bash
-bun test
-```
+Returns token as a string.
 
-Tests cover both signing modes and optional body hashing.
+#### `verifyAuthToken(token, target, timePad?, bodyEncoding?)`
+
+Verifies a token:
+
+* `token`: Token string
+* `target`: Expected `AuthPayload`
+* `timePad`: Optional allowed time skew in minutes (default `5`)
+* `bodyEncoding`: Optional body encoding (default `'utf8'`)
+
+Returns boolean indicating validity.
+
+#### `parseAuthToken(token)`
+
+Parses token into `AuthToken` or returns `null`.
 
 ## Development
 
-Uses Bun for development tasks:
+Use Bun to build and test:
 
-* **Build**: `bun run build`
-* **Test**: `bun test`
+```bash
+bun run build
+bun test
+```

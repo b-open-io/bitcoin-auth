@@ -14,4 +14,5 @@ export interface AuthPayload {
 export interface AuthToken extends AuthPayload {
   pubkey: string;    // User's public key in hex format
   signature: string; // The signature string, base64 encoded
+  scheme: 'bsm' | 'brc77'; // The scheme used to sign the payload
 } 
