@@ -47,7 +47,13 @@ const response = await fetch("https://somedomain.com/", {
 
 ## Usage Details
 
-Authentication involves creating a token from the request path, a timestamp, and when a body is part of the request you also sign the SHA256 hash of the request body. Two cryptographic modes are supported:
+Authentication involves creating a token from the request path, a timestamp, and the SHA256 hash of the body (when there is one). Two cryptographic modes are supported:
+
+*   **Request Path**: The `requestPath` parameter for all functions must be the full URL path that the server receives, including any leading slash and all query parameters (e.g., `/api/v1/items?category=books&page=2`). In an Express.js application, this typically corresponds to `req.originalUrl`.
+*   **Timestamp**: An ISO8601 formatted string.
+*   **Body Hashing**: If a request body is present, its SHA256 hash is included in the message to be signed.
+
+Two cryptographic modes are supported:
 
 * Classic 'bsm' mode uses [Bitcoin Signed Message](https://en.bitcoin.it/wiki/Message_signing)
 * Modern 'bsv' mode compliant with [BRC-77](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md).
@@ -66,7 +72,7 @@ const privateKey = PrivateKey.fromRandom();
 
 Prepare the path and body
 ```typescript
-const path = "/some/api/path";
+const path = "/some/api/path?param1=value1&param2=value2"; // Example including query parameters
 const body = JSON.stringify(["hello", "world"]);
 ```
 
@@ -88,13 +94,13 @@ const { pubkey, timestamp, requestPath, signature }: AuthToken = parseAuthToken(
 
 ```typescript
 // Verification example with body
-const payload: AuthPayload = {
+const authPayload: AuthPayload = {
   requestPath,
   timestamp: new Date().toISOString(),
   body,
 };
 // For bodies that are not UTF-8 strings, you can specify encoding e.g. 'hex' or 'base64' as the last argument to verifyAuthToken.
-const isValidWith = verifyAuthToken(tokenWithBody, payload);
+const valid = verifyAuthToken(token, authPayload);
 
 // Verification example without body
 const verificationPayloadNoBody: AuthPayload = {
@@ -156,4 +162,3 @@ Uses Bun for development tasks:
 
 * **Build**: `bun run build`
 * **Test**: `bun test`
-
