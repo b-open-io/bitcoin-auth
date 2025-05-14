@@ -42,15 +42,14 @@ const response = await fetch("https://somedomain.com/", {
 ## Features
 
 * **Auth Token Generation & Verification**: Easy-to-use functions for generating and verifying `X-Auth-Token` headers.
-* **Dual Cryptographic Modes**: Supports legacy 'bsm' and modern 'bsv' [(BRC-77)](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md) signing modes.
-* **Flexible payload support**: Supports binary encoded data for request bodies, and 
+* **Dual Cryptographic Modes**: Supports classic 'bsm' and modern 'bsv' [(BRC-77)](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md) signing modes.
 * **Zero Direct Dependencies**: Peer dependency of `@bsv/sdk` which itself has zero dependecies.
 
 ## Usage Details
 
-Authentication involves creating a token from the request path, a timestamp, and optionally, the SHA256 hash of the request body. Two cryptographic modes are supported:
+Authentication involves creating a token from the request path, a timestamp, and when a body is part of the request you also sign the SHA256 hash of the request body. Two cryptographic modes are supported:
 
-* Legacy 'bsm' mode.
+* Classic 'bsm' mode uses [Bitcoin Signed Message](https://en.bitcoin.it/wiki/Message_signing)
 * Modern 'bsv' mode compliant with [BRC-77](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md).
 
 ### Token Generation
@@ -76,7 +75,7 @@ When making a request with a body, be sure to provide it to the auth function.
 const tokenWithBody = getAuthToken(privateKeyWif, apiPath, httpRequestBody);
 ```
 
-// To sign using Bitcoin Signed Message (legacy) instead...
+// To sign using Bitcoin Signed Message (classic) instead...
 ```typescript
 const tokenNoBodyBsm = getAuthToken(privateKeyWif, apiPath, 'bsm');
 ```
