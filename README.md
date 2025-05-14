@@ -72,10 +72,10 @@ const body = JSON.stringify(["hello", "world"]);
 
 When making a request with a body, be sure to provide it to the auth function.
 ```typescript
-const tokenWithBody = getAuthToken(privateKeyWif, apiPath, httpRequestBody);
+const tokenWithBody = getAuthToken(privateKeyWif, apiPath, 'bsv', body);
 ```
 
-// To sign using Bitcoin Signed Message (classic) instead...
+To sign using Bitcoin Signed Message (classic) instead...
 ```typescript
 const tokenNoBodyBsm = getAuthToken(privateKeyWif, apiPath, 'bsm');
 ```
@@ -84,16 +84,13 @@ const tokenNoBodyBsm = getAuthToken(privateKeyWif, apiPath, 'bsm');
 
 ```typescript
 const { pubkey, timestamp, requestPath, signature }: AuthToken = parseAuthToken(tokenWithBody);
-console.log({ pubkey, timestamp, requestPath, signature });
-// Prints
-// { pubkey: '...', timestamp: '...', requestPath: '...', signature: '...' }
 ```
 
 ```typescript
 // Verification example with body
 const payload: AuthPayload = {
-  timestamp: new Date().toISOString(),
   requestPath,
+  timestamp: new Date().toISOString(),
   body,
 };
 // For bodies that are not UTF-8 strings, you can specify encoding e.g. 'hex' or 'base64' as the last argument to verifyAuthToken.
