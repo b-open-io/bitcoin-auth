@@ -13,7 +13,12 @@
   },
   "scripts": {
     "build": "bun run build.ts",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "lint": "bunx @biomejs/biome lint ./src ./test",
+    "lint:fix": "bunx @biomejs/biome lint --write ./src ./test",
+    "lint:unsafe": "bunx @biomejs/biome lint --write --unsafe ./src ./test",
+    "format": "bunx @biomejs/biome format --write ./src ./test",
+    "check": "bunx @biomejs/biome check --write ./src ./test"
   },
   "files": [
     "dist"
@@ -36,7 +41,8 @@
   ],
   "devDependencies": {
     "bun-plugin-dts": "^0.3.0",
-    "@types/bun": "^latest"
+    "@types/bun": "^latest",
+    "@biomejs/biome": "^1.9.4"
   },
   "peerDependencies": {
     "@bsv/sdk": "^1.5.0",

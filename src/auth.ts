@@ -1,8 +1,16 @@
-import { PrivateKey, BSM, Utils, Signature, PublicKey, SignedMessage, Hash } from '@bsv/sdk'
+import {
+  BSM,
+  Hash,
+  PrivateKey,
+  PublicKey,
+  Signature,
+  SignedMessage,
+  Utils,
+} from '@bsv/sdk';
 
 import type { AuthPayload, AuthToken } from './types';
 
-const { toBase64, toArray, toHex } = Utils
+const { toBase64, toArray, toHex } = Utils;
 
 /**
  * Generates an auth token for requests to the faucet API.
@@ -16,40 +24,45 @@ const getAuthTokenBSM = (
   privateKeyWif: string,
   requestPath: string,
   body?: string,
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8'
+  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
 ): string => {
-  const privateKey = PrivateKey.fromWif(privateKeyWif)
-  const pubkey = privateKey.toPublicKey().toString()
-  const timestamp = new Date().toISOString()
+  const privateKey = PrivateKey.fromWif(privateKeyWif);
+  const pubkey = privateKey.toPublicKey().toString();
+  const timestamp = new Date().toISOString();
   const bodyHash = body ? toHex(Hash.sha256(toArray(body, bodyEncoding))) : '';
-  const message = `${requestPath}|${timestamp}|${bodyHash}`
+  const message = `${requestPath}|${timestamp}|${bodyHash}`;
   const signature = BSM.sign(toArray(message), privateKey) as string;
 
-  return `${pubkey}|bsm|${timestamp}|${requestPath}|${signature}`
-}
+  return `${pubkey}|bsm|${timestamp}|${requestPath}|${signature}`;
+};
 
-const getAuthTokenBRC77 = (privateKeyWif: string, requestPath: string, body?: string, bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8'): string => {
-  const privateKey = PrivateKey.fromWif(privateKeyWif)
-  const pubkey = privateKey.toPublicKey().toString()
-  const timestamp = new Date().toISOString()
+const getAuthTokenBRC77 = (
+  privateKeyWif: string,
+  requestPath: string,
+  body?: string,
+  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
+): string => {
+  const privateKey = PrivateKey.fromWif(privateKeyWif);
+  const pubkey = privateKey.toPublicKey().toString();
+  const timestamp = new Date().toISOString();
   const bodyHash = body ? toHex(Hash.sha256(toArray(body, bodyEncoding))) : '';
-  const message = toArray(`${requestPath}|${timestamp}|${bodyHash}`)
-  const signature = toBase64(SignedMessage.sign(message, privateKey))
-  return `${pubkey}|brc77|${timestamp}|${requestPath}|${signature}`
-}
+  const message = toArray(`${requestPath}|${timestamp}|${bodyHash}`);
+  const signature = toBase64(SignedMessage.sign(message, privateKey));
+  return `${pubkey}|brc77|${timestamp}|${requestPath}|${signature}`;
+};
 
 const getAuthToken = (
   privateKeyWif: string,
   requestPath: string,
-  body?: string,
   scheme: 'bsm' | 'brc77' = 'brc77',
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8'
+  body?: string,
+  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
 ): string => {
   if (scheme === 'bsm') {
-    return getAuthTokenBSM(privateKeyWif, requestPath, body, bodyEncoding)
+    return getAuthTokenBSM(privateKeyWif, requestPath, body, bodyEncoding);
   }
-  return getAuthTokenBRC77(privateKeyWif, requestPath, body, bodyEncoding)
-}
+  return getAuthTokenBRC77(privateKeyWif, requestPath, body, bodyEncoding);
+};
 
 /**
  * Verifies an authentication token against a target payload.
@@ -62,15 +75,17 @@ const getAuthToken = (
 const verifyAuthTokenBSM = (
   parsedToken: AuthToken,
   target: AuthPayload,
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8'
+  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
 ): boolean => {
   const { pubkey, timestamp, requestPath, signature } = parsedToken;
-  const bodyHash = target.body ? toHex(Hash.sha256(toArray(target.body, bodyEncoding))) : '';
+  const bodyHash = target.body
+    ? toHex(Hash.sha256(toArray(target.body, bodyEncoding)))
+    : '';
   const message = `${requestPath}|${timestamp}|${bodyHash}`;
   const sig = Signature.fromCompact(signature, 'base64');
   const publicKey = PublicKey.fromString(pubkey);
   return BSM.verify(toArray(message), sig, publicKey);
-}
+};
 
 /**
  * Parses a BSM token payload into a structured object.
@@ -83,18 +98,24 @@ const parseAuthToken = (token: string): AuthToken | null => {
   if (parts.length !== 5) {
     return null; // Invalid structure
   }
-  const [pubkey, schemeStr, timestamp, requestPath, signature] = parts;
-  if (schemeStr !== 'bsm' && schemeStr !== 'brc77') {
+  const [pubkey, scheme, timestamp, requestPath, signature] = parts;
+  if (scheme !== 'bsm' && scheme !== 'brc77') {
     return null; // Invalid scheme
   }
   // Note: AuthToken in types.ts should include all these fields, including scheme
-  return { pubkey, scheme: schemeStr as 'bsm' | 'brc77', timestamp, requestPath, signature };
+  return {
+    pubkey,
+    scheme,
+    timestamp,
+    requestPath,
+    signature,
+  };
 };
 
 const verifyPreRequisites = (
   parsedToken: AuthToken,
   target: AuthPayload,
-  timePad = 5
+  timePad = 5,
 ): boolean => {
   const payloadTimestamp = new Date(parsedToken.timestamp);
   const targetTime = new Date(target.timestamp);
@@ -121,7 +142,7 @@ const verifyAuthToken = (
   token: string,
   target: AuthPayload,
   timePad = 5,
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8'
+  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
 ): boolean => {
   const parsedToken = parseAuthToken(token);
   if (!parsedToken) {
@@ -135,7 +156,7 @@ const verifyAuthToken = (
   if (parsedToken.scheme === 'bsm') {
     return verifyAuthTokenBSM(parsedToken, target, bodyEncoding);
   }
-  
+
   // If not 'bsm', it must be 'brc77' due to parseAuthToken validation
   return verifyAuthTokenBRC77(parsedToken, target, bodyEncoding);
 };
@@ -143,10 +164,12 @@ const verifyAuthToken = (
 const verifyAuthTokenBRC77 = (
   parsedToken: AuthToken,
   target: AuthPayload,
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8'
+  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
 ): boolean => {
   const { timestamp, requestPath, signature } = parsedToken;
-  const bodyHash = target.body ? toHex(Hash.sha256(toArray(target.body, bodyEncoding))) : '';
+  const bodyHash = target.body
+    ? toHex(Hash.sha256(toArray(target.body, bodyEncoding)))
+    : '';
   const messageToVerify = toArray(`${requestPath}|${timestamp}|${bodyHash}`);
   return SignedMessage.verify(messageToVerify, toArray(signature, 'base64'));
 };
@@ -158,5 +181,5 @@ export {
   verifyAuthTokenBSM,
   getAuthTokenBRC77,
   verifyAuthTokenBRC77,
-  parseAuthToken
-}
+  parseAuthToken,
+};
