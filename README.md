@@ -1,9 +1,6 @@
 # Bitcoin Auth
 
-[![npm version](https://badge.fury.io/js/bitcoin-auth.svg)](https://badge.fury.io/js/bitcoin-auth)
-[![npm downloads](https://img.shields.io/npm/dm/bitcoin-auth.svg)](https://www.npmjs.com/package/bitcoin-auth)
-
-The "Bitcoin Auth" library simplifies authenticating REST APIs with Bitcoin keys by generating and verifying cryptographic signatures in an `X-Auth-Token` header.
+The "Bitcoin Auth" library simplifies authenticating REST APIs using Bitcoin keys by generating and verifying cryptographic signatures in an `X-Auth-Token` header.
 
 ## Installation
 
@@ -15,74 +12,79 @@ bun add bitcoin-auth
 
 ## Generating an Auth Token
 
+Import and generate the token:
+
 ```typescript
 import { getAuthToken } from 'bitcoin-auth';
 
-// Generate the token
-const token = getAuthToken(privateKeyWif, path, body, 'brc77');
-```
+// Get a token
+const token = getAuthToken({ privateKeyWif, requestPath });
 
-```typescript
-console.log({ token });
-// Output: { token: "pubkey|scheme|timestamp|requestPath|signature" }
-```
-
-```typescript
-// Include the token in your API request:
-const response = await fetch("https://somedomain.com" + path, {
-  method: 'POST',
-  headers: { 'X-Auth-Token': token },
-  body
+// Include it in your API request
+const response = await fetch("https://somedomain.com" + requestPath, {
+  headers: { 'X-Auth-Token': token }
 });
 ```
 
-When your request includes a body, provide it:
+When your request includes a `body`:
 
 ```typescript
-const tokenWithBody = getAuthToken(privateKeyWif, apiPath, body, 'brc77');
+const token = getAuthToken({ privateKeyWif, requestPath, body });
 ```
 
-For classic Bitcoin Signed Message:
+Using Bitcoin Signed Message and specifying `bodyEncoding`:
 
 ```typescript
-const tokenNoBodyBsm = getAuthToken(privateKeyWif, apiPath, body, 'bsm');
+const token = getAuthToken({
+  privateKeyWif,
+  requestPath,
+  scheme: 'bsm',
+  body: "eyJrZXkiOiJ2YWx1ZSJ9",
+  bodyEncoding: 'base64'
+});
 ```
 
 ## Features
 
-* **Auth Token Generation & Verification**: Easy-to-use functions for token handling.
-* **Dual Cryptographic Schemes**: Supports 'bsm' (legacy) and 'brc77' (modern, [BRC-77](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md)).
+* **Auth Token Generation & Verification**: Simple functions for handling tokens.
+* **Dual Cryptographic Schemes**: Supports legacy 'bsm' and modern 'brc77' (recommended, [BRC-77](https://github.com/bitcoin-sv/BRCs/blob/master/peer-to-peer/0077.md)).
 * **Minimal Dependencies**: Only requires the peer dependency `@bsv/sdk`.
 
 ## Usage Details
 
-Tokens contain:
+Tokens include:
 
-* Request path (including query parameters)
+* Request path (with query parameters)
 * ISO8601 timestamp
-* SHA256 hash of request body (if present)
-* Signing scheme used ('bsm' or 'brc77')
+* SHA256 hash of the body (if present)
+* Signing scheme ('bsm' or 'brc77')
 
 Token format:
-`pubkey|scheme|timestamp|requestPath|signature`
+
+```
+pubkey|scheme|timestamp|requestPath|signature
+```
 
 Cryptographic schemes:
 
-* `'brc77'` (default): Recommended scheme, uses `SignedMessage.sign()` from BSV SDK.
-* `'bsm'`: Classic Bitcoin Signed Message via `BSM.sign()` from BSV SDK.
+* `'brc77'`: Default and recommended, uses `SignedMessage.sign()` from BSV SDK.
+* `'bsm'`: Legacy Bitcoin Signed Message (`BSM.sign()` from BSV SDK).
 
-### Token Generation Example
+### Example Token Generation
 
 ```typescript
-import { getAuthToken, parseAuthToken, verifyAuthToken, AuthToken, AuthPayload } from 'bitcoin-auth';
+import { getAuthToken, parseAuthToken, verifyAuthToken, AuthToken } from 'bitcoin-auth';
 import { PrivateKey } from "@bsv/sdk";
 
-const privateKey = PrivateKey.fromRandom();
-const path = "/some/api/path?param1=value1";
+const privateKeyWuf = PrivateKey.fromRandom().toWif();
+const requestPath = "/some/api/path?param1=value1";
 const body = JSON.stringify(["hello", "world"]);
 
-const tokenWithBody = getAuthToken(privateKeyWif, path, body, 'brc77');
-const tokenNoBodyBsm = getAuthToken(privateKeyWif, path, undefined, 'bsm');
+// body present, default (brc77) signing scheme, default body encoding (utf8)
+const token = getAuthToken({ privateKeyWif, requestPath, body });
+
+// no body, bsm signing scheme
+const token = getAuthToken({ privateKeyWif, requestPath, scheme: 'bsm' });
 ```
 
 ## Parsing & Verification
@@ -91,11 +93,10 @@ Parsing a token:
 
 ```typescript
 const parsedToken: AuthToken | null = parseAuthToken(tokenWithBody);
-if (parsedToken) {
-  console.log(parsedToken);
-} else {
-  console.log("Failed to parse token.");
+if (!parsedToken) {
+  console.error("Failed to parse bitcoin-auth token")
 }
+const { scheme, timestamp, requestPath, signature } = parsedToken;
 ```
 
 Verifying tokens:
@@ -123,18 +124,19 @@ const isValidNoBody = verifyAuthToken(tokenNoBodyBsm, payloadNoBody);
 
 Core authentication types:
 
+* `AuthConfig`: `{  }`
 * `AuthToken`: `{ pubkey, scheme, timestamp, requestPath, signature }`
-* `AuthPayload`: Data for signing/verification:
+* `AuthPayload`: Data required for signing/verification:
 
 ```typescript
 export interface AuthPayload {
   requestPath: string;
-  timestamp: string; // ISO8601
+  timestamp: string; // ISO8601 format
   body?: string;
 }
 ```
 
-Example:
+Example payload construction:
 
 ```typescript
 const payloadWithBody: AuthPayload = {
@@ -151,17 +153,15 @@ const payload: AuthPayload = {
 
 ### API Reference
 
-#### `getAuthToken(privateKeyWif, requestPath, body?, scheme?, bodyEncoding?)`
+#### `getAuthToken(config)`
 
-Generates a token:
+Generates a token using an `AuthConfig` object:
 
-* `privateKeyWif`: WIF format private key
-* `requestPath`: Full request URL path
-* `body`: Optional request body
-* `scheme`: Optional signing scheme (`'brc77'` or `'bsm'`, default `'brc77'`)
-* `bodyEncoding`: Optional encoding (default `'utf8'`)
-
-Returns token as a string.
+* `config.privateKeyWif`: Private key in WIF format (required)
+* `config.requestPath`: Full URL path (required)
+* `config.body?`: Optional request body string
+* `config.scheme?`: Signing scheme (`'brc77'` or `'bsm'`, default `'brc77'`)
+* `config.bodyEncoding?`: Encoding for the `body` (`'utf8'`, `'hex'`, or `'base64'`, default `'utf8'`)
 
 #### `verifyAuthToken(token, target, timePad?, bodyEncoding?)`
 
@@ -169,10 +169,10 @@ Verifies a token:
 
 * `token`: Token string
 * `target`: Expected `AuthPayload`
-* `timePad`: Optional allowed time skew in minutes (default `5`)
-* `bodyEncoding`: Optional body encoding (default `'utf8'`)
+* `timePad`: Allowed time skew in minutes (default `5`)
+* `bodyEncoding`: Encoding type (default `'utf8'`)
 
-Returns boolean indicating validity.
+Returns `true` if valid, else `false`.
 
 #### `parseAuthToken(token)`
 
