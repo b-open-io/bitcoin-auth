@@ -18,6 +18,8 @@ describe('Auth Token Utilities', () => {
   const requestPathWithQuery =
     '/test/auth_path?param1=value1&another=val2&third=true';
   const requestBody = JSON.stringify({ data: 'testPayload', value: 123 }); // Sample request body
+  const requestBodyHex = toHex(toArray(requestBody, 'utf8'));
+  const requestBodyBase64 = toBase64(toArray(requestBody, 'utf8'));
 
   beforeEach(() => {
     privateKey = PrivateKey.fromRandom();
@@ -28,12 +30,12 @@ describe('Auth Token Utilities', () => {
   describe("BRC-77 ('brc77' scheme)", () => {
     const scheme = 'brc77';
     it(`[${scheme} scheme] should generate a valid token with body (no query params)`, async () => {
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithoutQuery,
+        body: requestBody,
         scheme,
-      );
+      });
       expect(typeof token).toBe('string');
       const parsed = parseAuthToken(token);
       expect(parsed?.pubkey).toBe(publicKeyHex);
@@ -46,12 +48,13 @@ describe('Auth Token Utilities', () => {
     });
 
     it(`[${scheme} scheme] should generate a valid token with body (with query params)`, async () => {
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithQuery,
+        body: requestBody,
+        bodyEncoding: 'utf8',
         scheme,
-      );
+      });
       expect(typeof token).toBe('string');
       const parsed = parseAuthToken(token);
       expect(parsed?.pubkey).toBe(publicKeyHex);
@@ -64,32 +67,30 @@ describe('Auth Token Utilities', () => {
     });
 
     it(`[${scheme} scheme] should generate a valid token without body`, async () => {
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        undefined,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithoutQuery,
         scheme,
-      ); // body is undefined
+      }); // body is undefined
       expect(typeof token).toBe('string');
       const parsed = parseAuthToken(token);
       expect(parsed?.pubkey).toBe(publicKeyHex);
-      // ... other assertions
     });
 
     it(`[${scheme} scheme] verifyAuthToken should return true for a valid token with body`, async () => {
       const tokenTimestamp = new Date();
       const tokenTimestampStr = tokenTimestamp.toISOString();
       const originalDateToISOString = Date.prototype.toISOString;
-      Date.prototype.toISOString = jest.fn(
-        () => tokenTimestampStr,
-      ) as jest.Mock<() => string>;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
 
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithoutQuery,
+        body: requestBody,
         scheme,
-      );
+      });
       Date.prototype.toISOString = originalDateToISOString;
 
       const targetPayload: AuthPayload = {
@@ -97,23 +98,24 @@ describe('Auth Token Utilities', () => {
         timestamp: tokenTimestampStr,
         body: requestBody,
       };
-      expect(verifyAuthToken(token, targetPayload)).toBe(true);
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(true);
     });
 
-    it(`[${scheme} scheme] verifyAuthToken should return true for a valid token without body`, async () => {
+    it(`[${scheme} scheme] verifyAuthToken should return true for a valid token with body (with query params)`, async () => {
       const tokenTimestamp = new Date();
       const tokenTimestampStr = tokenTimestamp.toISOString();
       const originalDateToISOString = Date.prototype.toISOString;
-      Date.prototype.toISOString = jest.fn(
-        () => tokenTimestampStr,
-      ) as jest.Mock<() => string>;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
 
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithQuery,
+        body: requestBody,
         scheme,
-      );
+        bodyEncoding: 'utf8',
+      });
       Date.prototype.toISOString = originalDateToISOString;
 
       const targetPayload: AuthPayload = {
@@ -121,23 +123,46 @@ describe('Auth Token Utilities', () => {
         timestamp: tokenTimestampStr,
         body: requestBody,
       };
-      expect(verifyAuthToken(token, targetPayload)).toBe(true);
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(true);
+    });
+
+    it(`[${scheme} scheme] verifyAuthToken should return true for a valid token (explicitly no body)`, async () => {
+      const tokenTimestamp = new Date();
+      const tokenTimestampStr = tokenTimestamp.toISOString();
+      const originalDateToISOString = Date.prototype.toISOString;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
+
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithQuery,
+        scheme,
+      }); // body is undefined
+      Date.prototype.toISOString = originalDateToISOString;
+
+      const targetPayload: AuthPayload = {
+        requestPath: requestPathWithQuery,
+        timestamp: tokenTimestampStr,
+        // no body in target
+      };
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(true);
     });
 
     it(`[${scheme} scheme] verifyAuthToken should return false for a valid token with body mismatch`, async () => {
       const tokenTimestamp = new Date();
       const tokenTimestampStr = tokenTimestamp.toISOString();
       const originalDateToISOString = Date.prototype.toISOString;
-      Date.prototype.toISOString = jest.fn(
-        () => tokenTimestampStr,
-      ) as jest.Mock<() => string>;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
 
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithoutQuery,
+        body: requestBody,
         scheme,
-      );
+      });
       Date.prototype.toISOString = originalDateToISOString;
 
       const targetPayload: AuthPayload = {
@@ -145,7 +170,7 @@ describe('Auth Token Utilities', () => {
         timestamp: tokenTimestampStr,
         body: 'different body',
       };
-      expect(verifyAuthToken(token, targetPayload)).toBe(false);
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(false);
     });
 
     // it(`[${scheme} scheme] verifyAuthToken should correctly use SignedMessage.verify`, async () => {
@@ -157,12 +182,12 @@ describe('Auth Token Utilities', () => {
   describe("Legacy BSM ('bsm' scheme)", () => {
     const scheme = 'bsm';
     it(`[${scheme} scheme] should generate a valid token with body (with query params)`, async () => {
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithQuery,
+        body: requestBody,
         scheme,
-      );
+      });
       expect(typeof token).toBe('string');
       const parsed = parseAuthToken(token);
       expect(parsed?.pubkey).toBe(publicKeyHex);
@@ -171,12 +196,11 @@ describe('Auth Token Utilities', () => {
     });
 
     it(`[${scheme} scheme] should generate a valid token without body`, async () => {
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        undefined,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithoutQuery,
         scheme,
-      ); // body is undefined
+      }); // body is undefined
       expect(typeof token).toBe('string');
       const parsed = parseAuthToken(token);
       expect(parsed?.pubkey).toBe(publicKeyHex);
@@ -187,16 +211,16 @@ describe('Auth Token Utilities', () => {
       const tokenTimestamp = new Date();
       const tokenTimestampStr = tokenTimestamp.toISOString();
       const originalDateToISOString = Date.prototype.toISOString;
-      Date.prototype.toISOString = jest.fn(
-        () => tokenTimestampStr,
-      ) as jest.Mock<() => string>;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
 
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithoutQuery,
+        body: requestBody,
         scheme,
-      );
+      });
       Date.prototype.toISOString = originalDateToISOString;
 
       const targetPayload: AuthPayload = {
@@ -204,23 +228,24 @@ describe('Auth Token Utilities', () => {
         timestamp: tokenTimestampStr,
         body: requestBody,
       };
-      expect(verifyAuthToken(token, targetPayload)).toBe(true);
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(true);
     });
 
-    it(`[${scheme} scheme] verifyAuthToken should return true for a valid token without body`, async () => {
+    it(`[${scheme} scheme] verifyAuthToken should return true for a valid token with body (with query params)`, async () => {
       const tokenTimestamp = new Date();
       const tokenTimestampStr = tokenTimestamp.toISOString();
       const originalDateToISOString = Date.prototype.toISOString;
-      Date.prototype.toISOString = jest.fn(
-        () => tokenTimestampStr,
-      ) as jest.Mock<() => string>;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
 
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithQuery,
+        body: requestBody,
         scheme,
-      );
+        bodyEncoding: 'utf8',
+      });
       Date.prototype.toISOString = originalDateToISOString;
 
       const targetPayload: AuthPayload = {
@@ -228,23 +253,46 @@ describe('Auth Token Utilities', () => {
         timestamp: tokenTimestampStr,
         body: requestBody,
       };
-      expect(verifyAuthToken(token, targetPayload)).toBe(true);
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(true);
+    });
+
+    it(`[${scheme} scheme] verifyAuthToken should return true for a valid token (explicitly no body)`, async () => {
+      const tokenTimestamp = new Date();
+      const tokenTimestampStr = tokenTimestamp.toISOString();
+      const originalDateToISOString = Date.prototype.toISOString;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
+
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithQuery,
+        scheme,
+      }); // body is undefined
+      Date.prototype.toISOString = originalDateToISOString;
+
+      const targetPayload: AuthPayload = {
+        requestPath: requestPathWithQuery,
+        timestamp: tokenTimestampStr,
+        // no body in target
+      };
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(true);
     });
 
     it(`[${scheme} scheme] verifyAuthToken should return false for a valid token with body mismatch`, async () => {
       const tokenTimestamp = new Date();
       const tokenTimestampStr = tokenTimestamp.toISOString();
       const originalDateToISOString = Date.prototype.toISOString;
-      Date.prototype.toISOString = jest.fn(
-        () => tokenTimestampStr,
-      ) as jest.Mock<() => string>;
+      Date.prototype.toISOString = jest.fn(() => tokenTimestampStr) as jest.Mock<
+        () => string
+      >;
 
-      const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        requestBody,
+      const token = getAuthToken({
+        privateKeyWif: privateKey.toWif(),
+        requestPath: requestPathWithoutQuery,
+        body: requestBody,
         scheme,
-      );
+      });
       Date.prototype.toISOString = originalDateToISOString;
 
       const targetPayload: AuthPayload = {
@@ -252,7 +300,7 @@ describe('Auth Token Utilities', () => {
         timestamp: tokenTimestampStr,
         body: 'different body',
       };
-      expect(verifyAuthToken(token, targetPayload)).toBe(false);
+      expect(verifyAuthToken(token, targetPayload, 5, 'utf8')).toBe(false);
     });
 
     it(`[${scheme} scheme] verifyAuthToken should correctly use BSM.verify with body (with query params)`, async () => {
@@ -313,10 +361,11 @@ describe('Auth Token Utilities', () => {
         () => tokenTimestampStr,
       ) as jest.Mock<() => string>;
       const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        undefined,
-        scheme,
+        {
+          privateKeyWif: privateKey.toWif(),
+          requestPath: requestPathWithQuery,
+          scheme,
+        },
       );
       Date.prototype.toISOString = originalDateToISOString;
 
@@ -338,10 +387,11 @@ describe('Auth Token Utilities', () => {
         () => tokenTimestampStr,
       ) as jest.Mock<() => string>;
       const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        undefined,
-        scheme,
+        {
+          privateKeyWif: privateKey.toWif(),
+          requestPath: requestPathWithoutQuery,
+          scheme,
+        },
       );
       Date.prototype.toISOString = originalDateToISOString;
 
@@ -363,10 +413,11 @@ describe('Auth Token Utilities', () => {
         () => tokenTimestampStr,
       ) as jest.Mock<() => string>;
       const token = getAuthToken(
-        privateKey.toWif(),
-        requestPathWithoutQuery,
-        undefined,
-        scheme,
+        {
+          privateKeyWif: privateKey.toWif(),
+          requestPath: requestPathWithoutQuery,
+          scheme,
+        },
       );
       Date.prototype.toISOString = originalDateToISOString;
 
@@ -409,5 +460,118 @@ describe('Auth Token Utilities', () => {
       expect(parsed?.requestPath).toBe(requestPathWithoutQuery);
       expect(parsed?.signature).toBe(sig);
     });
+  });
+
+  describe('Common Verification Logic', () => {
+    it('parseAuthToken should return null for malformed token string', () => {
+      const malformedToken = 'pubkey|timestamp|path'; // Directly use the malformed string
+      const targetPayload: AuthPayload = {
+        requestPath: requestPathWithoutQuery,
+        timestamp: new Date().toISOString(),
+      };
+      expect(parseAuthToken(malformedToken)).toBeNull();
+    });
+
+    it('verifyAuthToken should return false for token with invalid scheme', () => {
+      const tokenTimestamp = new Date().toISOString();
+      const targetPayload: AuthPayload = {
+        requestPath: requestPathWithoutQuery,
+        timestamp: tokenTimestamp,
+      };
+      // Manually construct a token with an invalid scheme
+      const bodyHash = ''; // Assuming no body for simplicity in this specific test
+      const message = `${requestPathWithoutQuery}|${tokenTimestamp}|${bodyHash}`;
+      const signature = toBase64(SDKSignedMessage.sign(toArray(message), privateKey));
+      const malformedToken = `${publicKeyHex}|invalidScheme|${tokenTimestamp}|${requestPathWithoutQuery}|${signature}`;
+      expect(verifyAuthToken(malformedToken, targetPayload, 5, 'utf8')).toBe(false);
+    });
+
+    // Test cases for different body encodings
+    const encodings: Array<'utf8' | 'hex' | 'base64'> = [
+      'utf8',
+      'hex',
+      'base64',
+    ];
+    const schemesToTest: Array<'brc77' | 'bsm'> = ['brc77', 'bsm'];
+
+    for (const scheme of schemesToTest) {
+      for (const encoding of encodings) {
+        it(`[${scheme} scheme] should generate and verify token with bodyEncoding: ${encoding}`, async () => {
+          const tokenTimestamp = new Date();
+          const tokenTimestampStr = tokenTimestamp.toISOString();
+          const originalDateToISOString = Date.prototype.toISOString;
+          Date.prototype.toISOString = jest.fn(
+            () => tokenTimestampStr,
+          ) as jest.Mock<() => string>;
+
+          let bodyToSend = requestBody;
+          if (encoding === 'hex') {
+            bodyToSend = requestBodyHex;
+          } else if (encoding === 'base64') {
+            bodyToSend = requestBodyBase64;
+          }
+
+          const token = getAuthToken({
+            privateKeyWif: privateKey.toWif(),
+            requestPath: requestPathWithoutQuery,
+            body: bodyToSend,
+            bodyEncoding: encoding,
+            scheme,
+          });
+          Date.prototype.toISOString = originalDateToISOString;
+
+          // When verifying, the target.body should be the original (utf8) string,
+          // and verifyAuthToken will handle encoding it appropriately based on the bodyEncoding param.
+          const targetPayload: AuthPayload = {
+            requestPath: requestPathWithoutQuery,
+            timestamp: tokenTimestampStr,
+            body: bodyToSend,
+          };
+
+          // The bodyEncoding used for verification must match the one used for token generation
+          expect(verifyAuthToken(token, targetPayload, 5, encoding)).toBe(true);
+
+          // Test that verification fails if the wrong bodyEncoding is used for verification
+          const wrongEncoding = encodings.find((enc) => enc !== encoding);
+          if (wrongEncoding) {
+            expect(
+              verifyAuthToken(token, targetPayload, 5, wrongEncoding),
+            ).toBe(false);
+          }
+        });
+
+        it(`[${scheme} scheme] verifyAuthToken should return false for token with correct ${encoding} bodyEncoding but mismatched body content`, async () => {
+          const tokenTimestamp = new Date();
+          const tokenTimestampStr = tokenTimestamp.toISOString();
+          const originalDateToISOString = Date.prototype.toISOString;
+          Date.prototype.toISOString = jest.fn(
+            () => tokenTimestampStr,
+          ) as jest.Mock<() => string>;
+
+          let bodyToSend = requestBody;
+          if (encoding === 'hex') {
+            bodyToSend = requestBodyHex;
+          } else if (encoding === 'base64') {
+            bodyToSend = requestBodyBase64;
+          }
+          
+          const token = getAuthToken({
+            privateKeyWif: privateKey.toWif(),
+            requestPath: requestPathWithoutQuery,
+            body: bodyToSend,
+            bodyEncoding: encoding,
+            scheme
+          });
+          Date.prototype.toISOString = originalDateToISOString;
+
+          const targetPayload: AuthPayload = {
+            requestPath: requestPathWithoutQuery,
+            timestamp: tokenTimestampStr,
+            body: "a different body content", // Mismatched body
+          };
+          expect(verifyAuthToken(token, targetPayload, 5, encoding)).toBe(false);
+        });
+      }
+    }
   });
 });

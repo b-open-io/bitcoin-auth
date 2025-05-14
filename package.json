@@ -1,6 +1,6 @@
 {
   "name": "bitcoin-auth",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -32,12 +32,15 @@
   "bugs": "https://github.com/b-open-io/bitcoin-auth/issues",
   "author": "Luke Rohenaz <luke@rohenaz.com>",
   "keywords": [
-    "bsv",
     "bitcoin",
     "signature",
     "faucet",
     "bsm",
-    "brc-77"
+    "auth",
+    "brc-77",
+    "bsv",
+    "bch",
+    "btc"
   ],
   "devDependencies": {
     "bun-plugin-dts": "^0.3.0",

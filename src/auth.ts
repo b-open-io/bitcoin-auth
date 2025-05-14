@@ -8,7 +8,7 @@ import {
   Utils,
 } from '@bsv/sdk';
 
-import type { AuthPayload, AuthToken } from './types';
+import type { AuthConfig, AuthPayload, AuthToken } from './types';
 
 const { toBase64, toArray, toHex } = Utils;
 
@@ -20,12 +20,10 @@ const { toBase64, toArray, toHex } = Utils;
  * @param body - Optional request body string to include in the signature.
  * @returns A promise that resolves to the Base64 encoded JSON string auth token.
  */
-const getAuthTokenBSM = (
-  privateKeyWif: string,
-  requestPath: string,
-  body?: string,
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
-): string => {
+const getAuthTokenBSM = (config: AuthConfig): string => {
+  const { privateKeyWif, requestPath, body } = config;
+  const bodyEncoding = config.bodyEncoding ?? 'utf8';
+
   const privateKey = PrivateKey.fromWif(privateKeyWif);
   const pubkey = privateKey.toPublicKey().toString();
   const timestamp = new Date().toISOString();
@@ -36,12 +34,10 @@ const getAuthTokenBSM = (
   return `${pubkey}|bsm|${timestamp}|${requestPath}|${signature}`;
 };
 
-const getAuthTokenBRC77 = (
-  privateKeyWif: string,
-  requestPath: string,
-  body?: string,
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
-): string => {
+const getAuthTokenBRC77 = (config: AuthConfig): string => {
+  const { privateKeyWif, requestPath, body } = config;
+  const bodyEncoding = config.bodyEncoding ?? 'utf8';
+
   const privateKey = PrivateKey.fromWif(privateKeyWif);
   const pubkey = privateKey.toPublicKey().toString();
   const timestamp = new Date().toISOString();
@@ -51,17 +47,24 @@ const getAuthTokenBRC77 = (
   return `${pubkey}|brc77|${timestamp}|${requestPath}|${signature}`;
 };
 
-const getAuthToken = (
-  privateKeyWif: string,
-  requestPath: string,
-  scheme: 'bsm' | 'brc77' = 'brc77',
-  body?: string,
-  bodyEncoding: 'hex' | 'base64' | 'utf8' = 'utf8',
-): string => {
-  if (scheme === 'bsm') {
-    return getAuthTokenBSM(privateKeyWif, requestPath, body, bodyEncoding);
+/**
+ * Generates an auth token for requests to bitcoin-auth APIs
+ *
+ * @param config - The configuration for generating an authentication token.
+ * @returns A promise that resolves to the Base64 encoded JSON string auth token.
+ */
+const getAuthToken = (config: AuthConfig): string => {
+  // Apply defaults for scheme and bodyEncoding before passing to specific functions
+  const effectiveConfig: Required<Omit<AuthConfig, 'body'>> & { body?: string } = {
+    ...config,
+    scheme: config.scheme ?? 'brc77',
+    bodyEncoding: config.bodyEncoding ?? 'utf8',
+  };
+
+  if (effectiveConfig.scheme === 'bsm') {
+    return getAuthTokenBSM(effectiveConfig);
   }
-  return getAuthTokenBRC77(privateKeyWif, requestPath, body, bodyEncoding);
+  return getAuthTokenBRC77(effectiveConfig);
 };
 
 /**
