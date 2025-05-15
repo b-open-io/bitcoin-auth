@@ -26,7 +26,7 @@ const getAuthTokenBSM = (config: AuthConfig): string => {
 
   const privateKey = PrivateKey.fromWif(privateKeyWif);
   const pubkey = privateKey.toPublicKey().toString();
-  const timestamp = new Date().toISOString();
+  const timestamp = config.timestamp ?? new Date().toISOString();
   const bodyHash = body ? toHex(Hash.sha256(toArray(body, bodyEncoding))) : '';
   const message = `${requestPath}|${timestamp}|${bodyHash}`;
   const signature = BSM.sign(toArray(message), privateKey) as string;
@@ -40,7 +40,7 @@ const getAuthTokenBRC77 = (config: AuthConfig): string => {
 
   const privateKey = PrivateKey.fromWif(privateKeyWif);
   const pubkey = privateKey.toPublicKey().toString();
-  const timestamp = new Date().toISOString();
+  const timestamp = config.timestamp ?? new Date().toISOString();
   const bodyHash = body ? toHex(Hash.sha256(toArray(body, bodyEncoding))) : '';
   const message = toArray(`${requestPath}|${timestamp}|${bodyHash}`);
   const signature = toBase64(SignedMessage.sign(message, privateKey));
@@ -55,10 +55,11 @@ const getAuthTokenBRC77 = (config: AuthConfig): string => {
  */
 const getAuthToken = (config: AuthConfig): string => {
   // Apply defaults for scheme and bodyEncoding before passing to specific functions
-  const effectiveConfig: Required<Omit<AuthConfig, 'body'>> & { body?: string } = {
+  const effectiveConfig: Omit<Required<Omit<AuthConfig, 'body' | 'timestamp'>>, 'scheme' | 'bodyEncoding'> & AuthConfig = {
     ...config,
     scheme: config.scheme ?? 'brc77',
     bodyEncoding: config.bodyEncoding ?? 'utf8',
+    // timestamp will be handled by getAuthTokenBSM/BRC77 if undefined
   };
 
   if (effectiveConfig.scheme === 'bsm') {

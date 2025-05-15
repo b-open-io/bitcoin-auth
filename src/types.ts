@@ -19,6 +19,13 @@ export interface AuthToken extends AuthPayload {
 
 /**
  * The configuration for generating an authentication token.
+ * 
+ * @param privateKeyWif - The user's WIF-encoded private key.
+ * @param requestPath - The full API endpoint path (e.g., /faucet/myfaucet/status).
+ * @param body - Optional request body string to include in the signature.
+ * @param scheme - The scheme to use for signing the payload.
+ * @param bodyEncoding - The encoding of the body string.
+ * @param timestamp - The ISO8601 timestamp to use for the signature.
  */
 export interface AuthConfig {
   privateKeyWif: string;
@@ -26,4 +33,5 @@ export interface AuthConfig {
   body?: string;
   scheme?: 'bsm' | 'brc77';
   bodyEncoding?: 'hex' | 'base64' | 'utf8';
+  timestamp?: string;
 }
