@@ -186,3 +186,7 @@ Use Bun to build and test:
 bun run build
 bun test
 ```
+
+## Other Implementations
+
+- **Go**: [b-open-io/go-bitcoin-auth](https://github.com/b-open-io/go-bitcoin-auth)

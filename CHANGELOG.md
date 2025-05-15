@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] - YYYY-MM-DD
+
+### Added
+- Added `test/brc77-tampering.test.ts` to specifically verify that the BRC-77 implementation is not vulnerable to payload tampering.
+- Added `test/static-vectors.test.ts` with a comprehensive suite of static test vectors for `getAuthToken` and `verifyAuthToken`, covering various scenarios for BRC-77 and BSM schemes, including timestamp validation and different tampering attempts.
+- Enhanced `AuthConfig` to accept an optional `timestamp` parameter, allowing for fixed timestamps during token generation, primarily to support stable static test vector creation.
+
+### Changed
+- Modified `getAuthToken`, `getAuthTokenBSM`, and `getAuthTokenBRC77` to utilize the optional `timestamp` from `AuthConfig` if provided, defaulting to the current time otherwise.
+
+### Fixed
+- Corrected issues in `test/static-vectors.test.ts` related to the generation and validation of tokens with fixed timestamps, ensuring accurate testing of time-based verification logic.
+- Resolved an "Invalid checksum" error in static test vector generation by ensuring valid WIFs are used.
+
 ## [0.0.3] - 2025-05-14
 
 ### Added
