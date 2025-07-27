@@ -76,7 +76,7 @@ Cryptographic schemes:
 import { getAuthToken, parseAuthToken, verifyAuthToken, AuthToken } from 'bitcoin-auth';
 import { PrivateKey } from "@bsv/sdk";
 
-const privateKeyWuf = PrivateKey.fromRandom().toWif();
+const privateKeyWif = PrivateKey.fromRandom().toWif();
 const requestPath = "/some/api/path?param1=value1";
 const body = JSON.stringify(["hello", "world"]);
 
