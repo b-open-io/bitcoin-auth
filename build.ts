@@ -3,7 +3,9 @@ import dts from 'bun-plugin-dts'
 
 const defaultBuildConfig: BuildConfig = {
   entrypoints: ['./src/index.ts'],
-  outdir: './dist'
+  outdir: './dist',
+  // Don't bundle @bsv/sdk - it needs to use Node.js crypto module
+  external: ['@bsv/sdk']
 }
 
 await Promise.all([

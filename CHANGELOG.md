@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.4] - YYYY-MM-DD
+## [0.0.5] - 2025-10-21
+
+### Fixed
+- Fixed "no secure random number generator" error by marking `@bsv/sdk` as external in the build configuration, preventing it from being bundled and allowing it to properly access Node.js crypto module at runtime.
+
+## [0.0.4] - 2025-05-15
 
 ### Added
 - Added `test/brc77-tampering.test.ts` to specifically verify that the BRC-77 implementation is not vulnerable to payload tampering.
