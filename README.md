@@ -187,55 +187,44 @@ bun run build
 bun test
 ```
 
-## Encrypted Transport
+## Counterparty Encryption
 
-Secure browser-to-server communication using ECDH + AES-256-GCM (BRC-2 compliant).
-
-### Client-side Encryption
-
-```typescript
-import { encryptPayload } from 'bitcoin-auth';
-
-// Encrypt sensitive data to server's session public key
-const encrypted = encryptPayload(serverPublicKeyHex, JSON.stringify({ password: 'secret' }));
-
-// Send encrypted payload
-await fetch('/api/login', {
-  method: 'POST',
-  body: JSON.stringify(encrypted)
-});
-```
-
-### Server-side Decryption
+ECDH + AES-256-GCM encryption between two parties with known keys.
 
 ```typescript
 import { PrivateKey } from '@bsv/sdk';
-import { decryptPayload, type EncryptedPayload } from 'bitcoin-auth';
+import { encrypt, decrypt } from 'bitcoin-auth';
 
-// Server maintains a session key (rotate on restart for forward secrecy)
-const sessionKey = PrivateKey.fromRandom();
+// Alice and Bob have their own keypairs
+const alice = PrivateKey.fromRandom();
+const bob = PrivateKey.fromRandom();
 
-// Decrypt incoming request
-const body = await request.json() as EncryptedPayload;
-const plaintext = decryptPayload(sessionKey, body);
-const { password } = JSON.parse(plaintext);
+// Alice encrypts a message for Bob
+const ciphertext = encrypt(alice, bob.toPublicKey().toString(), "Hello Bob!");
+
+// Bob decrypts using his private key and Alice's public key
+const plaintext = decrypt(bob, alice.toPublicKey().toString(), ciphertext);
 ```
 
-### Security Properties
+Both parties derive the same shared secret via ECDH:
+- Alice: `alicePrivKey * bobPubKey`
+- Bob: `bobPrivKey * alicePubKey`
 
-- **Forward secrecy**: Each request uses a fresh ephemeral client key
-- **Anti-sniffing**: All sensitive data encrypted with AES-256-GCM
-- **Anti-tampering**: GCM auth tag ensures integrity
-- **Ephemeral server keys**: Rotate on server restart
+### API
 
-### Types
+#### `encrypt(senderPrivKey, recipientPubKey, plaintext)`
 
-```typescript
-interface EncryptedPayload {
-  ephemeralPub: string;  // Client's ephemeral public key (hex)
-  ciphertext: string;    // AES-256-GCM encrypted data (hex)
-}
-```
+- `senderPrivKey`: Sender's `PrivateKey`
+- `recipientPubKey`: Recipient's public key (hex string)
+- `plaintext`: Message to encrypt
+- Returns: Ciphertext (hex string)
+
+#### `decrypt(recipientPrivKey, senderPubKey, ciphertext)`
+
+- `recipientPrivKey`: Recipient's `PrivateKey`
+- `senderPubKey`: Sender's public key (hex string)
+- `ciphertext`: Encrypted message (hex string)
+- Returns: Decrypted plaintext
 
 ## Other Implementations
 

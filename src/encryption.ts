@@ -1,43 +1,43 @@
 import { PrivateKey, PublicKey, SymmetricKey, Utils } from "@bsv/sdk";
 
-export interface EncryptedPayload {
-	ephemeralPub: string;
-	ciphertext: string;
+/**
+ * Encrypt a message for a counterparty using ECDH + AES-256-GCM.
+ *
+ * Both parties derive the same shared secret:
+ * - Sender: senderPrivKey * recipientPubKey
+ * - Recipient: recipientPrivKey * senderPubKey
+ *
+ * @param senderPrivKey - Sender's private key
+ * @param recipientPubKey - Recipient's public key (hex string)
+ * @param plaintext - Message to encrypt
+ * @returns Ciphertext (hex string)
+ */
+export function encrypt(
+	senderPrivKey: PrivateKey,
+	recipientPubKey: string,
+	plaintext: string,
+): string {
+	const recipientPub = PublicKey.fromString(recipientPubKey);
+	const sharedPoint = senderPrivKey.deriveSharedSecret(recipientPub);
+	const symmetricKey = new SymmetricKey(sharedPoint.encode(true).slice(1));
+	return symmetricKey.encrypt(Utils.toArray(plaintext, "utf8"), "hex") as string;
 }
 
-export function encryptPayload(serverPubKeyHex: string, plaintext: string): EncryptedPayload {
-	if (!serverPubKeyHex || typeof serverPubKeyHex !== "string") {
-		throw new Error("Invalid server public key");
-	}
-
-	let serverPubKey: PublicKey;
-	try {
-		serverPubKey = PublicKey.fromString(serverPubKeyHex);
-	} catch {
-		throw new Error("Invalid server public key format");
-	}
-
-	const ephemeralPriv = PrivateKey.fromRandom();
-	const sharedPoint = ephemeralPriv.deriveSharedSecret(serverPubKey);
+/**
+ * Decrypt a message from a counterparty using ECDH + AES-256-GCM.
+ *
+ * @param recipientPrivKey - Recipient's private key
+ * @param senderPubKey - Sender's public key (hex string)
+ * @param ciphertext - Encrypted message (hex string)
+ * @returns Decrypted plaintext
+ */
+export function decrypt(
+	recipientPrivKey: PrivateKey,
+	senderPubKey: string,
+	ciphertext: string,
+): string {
+	const senderPub = PublicKey.fromString(senderPubKey);
+	const sharedPoint = recipientPrivKey.deriveSharedSecret(senderPub);
 	const symmetricKey = new SymmetricKey(sharedPoint.encode(true).slice(1));
-
-	return {
-		ephemeralPub: ephemeralPriv.toPublicKey().toString(),
-		ciphertext: symmetricKey.encrypt(Utils.toArray(plaintext, "utf8"), "hex") as string,
-	};
-}
-
-export function decryptPayload(serverPrivKey: PrivateKey, encrypted: EncryptedPayload): string {
-	if (!encrypted?.ephemeralPub || typeof encrypted.ephemeralPub !== "string") {
-		throw new Error("Invalid encrypted payload: missing ephemeralPub");
-	}
-	if (!encrypted?.ciphertext || typeof encrypted.ciphertext !== "string") {
-		throw new Error("Invalid encrypted payload: missing ciphertext");
-	}
-
-	const ephemeralPub = PublicKey.fromString(encrypted.ephemeralPub);
-	const sharedPoint = serverPrivKey.deriveSharedSecret(ephemeralPub);
-	const symmetricKey = new SymmetricKey(sharedPoint.encode(true).slice(1));
-
-	return symmetricKey.decrypt(Utils.toArray(encrypted.ciphertext, "hex"), "utf8") as string;
+	return symmetricKey.decrypt(Utils.toArray(ciphertext, "hex"), "utf8") as string;
 }
