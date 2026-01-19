@@ -187,6 +187,56 @@ bun run build
 bun test
 ```
 
+## Encrypted Transport
+
+Secure browser-to-server communication using ECDH + AES-256-GCM (BRC-2 compliant).
+
+### Client-side Encryption
+
+```typescript
+import { encryptPayload } from 'bitcoin-auth';
+
+// Encrypt sensitive data to server's session public key
+const encrypted = encryptPayload(serverPublicKeyHex, JSON.stringify({ password: 'secret' }));
+
+// Send encrypted payload
+await fetch('/api/login', {
+  method: 'POST',
+  body: JSON.stringify(encrypted)
+});
+```
+
+### Server-side Decryption
+
+```typescript
+import { PrivateKey } from '@bsv/sdk';
+import { decryptPayload, type EncryptedPayload } from 'bitcoin-auth';
+
+// Server maintains a session key (rotate on restart for forward secrecy)
+const sessionKey = PrivateKey.fromRandom();
+
+// Decrypt incoming request
+const body = await request.json() as EncryptedPayload;
+const plaintext = decryptPayload(sessionKey, body);
+const { password } = JSON.parse(plaintext);
+```
+
+### Security Properties
+
+- **Forward secrecy**: Each request uses a fresh ephemeral client key
+- **Anti-sniffing**: All sensitive data encrypted with AES-256-GCM
+- **Anti-tampering**: GCM auth tag ensures integrity
+- **Ephemeral server keys**: Rotate on server restart
+
+### Types
+
+```typescript
+interface EncryptedPayload {
+  ephemeralPub: string;  // Client's ephemeral public key (hex)
+  ciphertext: string;    // AES-256-GCM encrypted data (hex)
+}
+```
+
 ## Other Implementations
 
 - **Go**: [b-open-io/go-bitcoin-auth](https://github.com/b-open-io/go-bitcoin-auth)

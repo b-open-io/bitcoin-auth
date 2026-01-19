@@ -1,2 +1,3 @@
 export { getAuthToken, parseAuthToken, verifyAuthToken } from './auth';
-export * from './types';
+export type { AuthPayload, AuthToken, AuthConfig } from './types';
+export { encryptPayload, decryptPayload, type EncryptedPayload } from './encryption';

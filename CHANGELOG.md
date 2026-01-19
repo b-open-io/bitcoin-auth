@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2026-01-18
+
+### Added
+- New encrypted transport module (`encryptPayload`, `decryptPayload`) for secure browser-to-server communication using ECDH + AES-256-GCM (BRC-2 compliant)
+- Forward secrecy via ephemeral client keys per request
+- Comprehensive test suite for encryption functionality
+
 ## [0.0.5] - 2025-10-21
 
 ### Fixed
