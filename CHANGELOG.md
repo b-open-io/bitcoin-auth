@@ -5,25 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.7] - 2026-01-18
-
-### Changed
-- **BREAKING**: Renamed encryption functions to `encrypt`/`decrypt` with correct ECDH API
-- Both parties now provide their own keys: `encrypt(senderPrivKey, recipientPubKey, plaintext)`
-- Removed `EncryptedPayload` type - functions now return/accept plain ciphertext strings
+## [0.0.8] - 2026-01-18
 
 ### Removed
-- Removed incorrect ephemeral key generation from encryption module
+- Removed encryption module entirely - use `@bsv/sdk` `EncryptedMessage` instead
+- bitcoin-auth is now focused solely on authentication (X-Auth-Token)
 
-## [0.0.6] - 2026-01-18
+## [0.0.7] - 2026-01-18 [YANKED]
 
-### Added
-- New encrypted transport module (`encryptPayload`, `decryptPayload`) for secure browser-to-server communication using ECDH + AES-256-GCM (BRC-2 compliant)
-- Forward secrecy via ephemeral client keys per request
-- Comprehensive test suite for encryption functionality
+Encryption API redesign - superseded by 0.0.8
 
-### Deprecated
-- This version had an incorrect API design and was superseded by 0.0.7
+## [0.0.6] - 2026-01-18 [YANKED]
+
+Encryption module added - removed in 0.0.8
 
 ## [0.0.5] - 2025-10-21
 

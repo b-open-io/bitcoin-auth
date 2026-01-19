@@ -187,45 +187,6 @@ bun run build
 bun test
 ```
 
-## Counterparty Encryption
-
-ECDH + AES-256-GCM encryption between two parties with known keys.
-
-```typescript
-import { PrivateKey } from '@bsv/sdk';
-import { encrypt, decrypt } from 'bitcoin-auth';
-
-// Alice and Bob have their own keypairs
-const alice = PrivateKey.fromRandom();
-const bob = PrivateKey.fromRandom();
-
-// Alice encrypts a message for Bob
-const ciphertext = encrypt(alice, bob.toPublicKey().toString(), "Hello Bob!");
-
-// Bob decrypts using his private key and Alice's public key
-const plaintext = decrypt(bob, alice.toPublicKey().toString(), ciphertext);
-```
-
-Both parties derive the same shared secret via ECDH:
-- Alice: `alicePrivKey * bobPubKey`
-- Bob: `bobPrivKey * alicePubKey`
-
-### API
-
-#### `encrypt(senderPrivKey, recipientPubKey, plaintext)`
-
-- `senderPrivKey`: Sender's `PrivateKey`
-- `recipientPubKey`: Recipient's public key (hex string)
-- `plaintext`: Message to encrypt
-- Returns: Ciphertext (hex string)
-
-#### `decrypt(recipientPrivKey, senderPubKey, ciphertext)`
-
-- `recipientPrivKey`: Recipient's `PrivateKey`
-- `senderPubKey`: Sender's public key (hex string)
-- `ciphertext`: Encrypted message (hex string)
-- Returns: Decrypted plaintext
-
 ## Other Implementations
 
 - **Go**: [b-open-io/go-bitcoin-auth](https://github.com/b-open-io/go-bitcoin-auth)
