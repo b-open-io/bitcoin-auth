@@ -1,6 +1,6 @@
 {
   "name": "bitcoin-auth",
-  "version": "0.0.7",
+  "version": "0.0.9",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -48,7 +48,7 @@
     "bun-plugin-dts": "^0.3.0"
   },
   "peerDependencies": {
-    "@bsv/sdk": "^1.5.1",
+    "@bsv/sdk": "^2.0.6",
     "typescript": "^5.8.3"
   }
 }
