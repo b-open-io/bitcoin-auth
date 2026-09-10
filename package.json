@@ -44,11 +44,15 @@
   ],
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@bsv/sdk": "^2.5.0",
     "@types/bun": "1.2.13",
     "bun-plugin-dts": "^0.3.0"
   },
   "peerDependencies": {
-    "@bsv/sdk": "^2.0.6",
+    "@bsv/sdk": "^2.5.0",
     "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

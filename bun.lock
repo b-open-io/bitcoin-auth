@@ -6,11 +6,12 @@
       "name": "bitcoin-auth",
       "devDependencies": {
         "@biomejs/biome": "^1.9.4",
+        "@bsv/sdk": "^2.5.0",
         "@types/bun": "1.2.13",
         "bun-plugin-dts": "^0.3.0",
       },
       "peerDependencies": {
-        "@bsv/sdk": "^2.0.6",
+        "@bsv/sdk": "^2.5.0",
         "typescript": "^5.8.3",
       },
     },
@@ -34,7 +35,7 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@1.9.4", "", { "os": "win32", "cpu": "x64" }, "sha512-8Y5wMhVIPaWe6jw2H+KlEm4wP/f7EW3810ZLmDlrEEy5KvBsb9ECEfu/kMWD484ijfQ8+nIi0giMgu9g1UAuuA=="],
 
-    "@bsv/sdk": ["@bsv/sdk@1.5.1", "", {}, "sha512-bK42DKSXiqb1QgOBwGXiFoC5HKZhH2SrnaPrPT4rrfMpjt/UCk5m3/Zm09MxiVU4BriO67kLUa7j4BbJ0rlsjg=="],
+    "@bsv/sdk": ["@bsv/sdk@2.6.0", "", {}, "sha512-sha4uZvrY1PPbbT2HrH03Bbb2ifsNDI768Rz9f2NnQzOE8O85HH1eyeQUmj2qy13yWF8zZh98XuWZTSx4uH0JA=="],
 
     "@types/bun": ["@types/bun@1.2.13", "", { "dependencies": { "bun-types": "1.2.13" } }, "sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg=="],
 
